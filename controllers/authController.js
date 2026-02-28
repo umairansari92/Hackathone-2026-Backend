@@ -14,7 +14,7 @@ const generateToken = (id) => {
 // @access  Public
 export const signup = async (req, res) => {
   try {
-    const { fullname, email, password, gender } = req.body;
+    const { fullname, email, password, gender, role } = req.body;
 
     // Check if user exists
     const userExists = await User.findOne({ email });
@@ -53,6 +53,8 @@ export const signup = async (req, res) => {
       email,
       password,
       gender,
+      role: role || "Patient",
+      subscriptionPlan: "Free", // Default SaaS limit
       image: imageUrl,
     });
 
@@ -62,6 +64,7 @@ export const signup = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         gender: user.gender,
+        role: user.role,
         image: user.image,
         token: generateToken(user._id),
       });
@@ -111,6 +114,7 @@ export const login = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         gender: user.gender,
+        role: user.role,
         image: user.image,
         token: generateToken(user._id),
       });

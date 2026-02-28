@@ -31,6 +31,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "no-photo.jpg",
     },
+    role: {
+      type: String,
+      enum: ["Admin", "Doctor", "Receptionist", "Patient"],
+      default: "Patient",
+    },
+    subscriptionPlan: {
+      type: String,
+      enum: ["Free", "Pro"],
+      default: "Free",
+    },
   },
   {
     timestamps: true,
