@@ -1,4 +1,5 @@
 import Appointment from "../models/Appointment.js";
+import Patient from "../models/Patient.js"; // required for populate()
 
 // @desc    Get all appointments
 // @route   GET /api/appointments
