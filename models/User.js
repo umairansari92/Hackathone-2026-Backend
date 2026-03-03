@@ -52,6 +52,11 @@ const userSchema = new mongoose.Schema(
     allergies: { type: String, default: "" },
     emergencyContact: { type: String, default: "" },
     medicalNotes: { type: String, default: "" },
+    status: {
+      type: String,
+      enum: ["Pending", "Approved", "Rejected"],
+      default: "Approved",
+    },
   },
   {
     timestamps: true,
