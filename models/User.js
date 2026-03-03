@@ -41,6 +41,17 @@ const userSchema = new mongoose.Schema(
       enum: ["Free", "Pro"],
       default: "Free",
     },
+    // Patient extended profile fields
+    phone: { type: String, default: "" },
+    address: { type: String, default: "" },
+    bloodGroup: {
+      type: String,
+      enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", ""],
+      default: "",
+    },
+    allergies: { type: String, default: "" },
+    emergencyContact: { type: String, default: "" },
+    medicalNotes: { type: String, default: "" },
   },
   {
     timestamps: true,
