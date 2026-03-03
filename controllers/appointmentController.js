@@ -10,7 +10,7 @@ export const getAppointments = async (req, res) => {
     if (req.user.role === "Doctor") {
       query.doctorId = req.user._id;
     } else if (req.user.role === "Patient") {
-      query.patientId = req.user._id;
+      query.$or = [{ patientId: req.user._id }, { userId: req.user._id }];
     }
 
     const appointments = await Appointment.find(query)

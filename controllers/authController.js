@@ -109,6 +109,21 @@ export const login = async (req, res) => {
     const user = await User.findOne({ email }).select("+password");
 
     if (user && (await user.matchPassword(password))) {
+      // Check status for Doctors (or any user with status not Approved)
+      if (user.status === "Pending") {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Your account is under review. Please wait for admin approval.",
+          });
+      }
+      if (user.status === "Rejected") {
+        return res
+          .status(403)
+          .json({ message: "Account rejected. Please contact admin." });
+      }
+
       res.json({
         _id: user.id,
         fullname: user.fullname,

@@ -16,8 +16,9 @@ import analyticsRoutes from "./routes/analyticsRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import diagnosisRoutes from "./routes/diagnosisRoutes.js";
 import scheduleRoutes from "./routes/scheduleRoutes.js";
-import tokenRoutes from "./routes/tokenRoutes.js";
 import patientSelfRoutes from "./routes/patientSelfRoutes.js";
+import onboardingRoutes from "./routes/onboardingRoutes.js";
+import tokenRoutes from "./routes/tokenRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -67,6 +68,7 @@ app.use("/api/diagnosis", diagnosisRoutes);
 app.use("/api/schedule", scheduleRoutes);
 app.use("/api/tokens", tokenRoutes);
 app.use("/api/patient", patientSelfRoutes);
+app.use("/api/onboarding", onboardingRoutes);
 
 // ─── Health Check ───────────────────────────────────────────────────────────
 app.get("/api/health", (req, res) =>
