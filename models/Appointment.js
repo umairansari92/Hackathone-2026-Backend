@@ -5,7 +5,11 @@ const appointmentSchema = new mongoose.Schema(
     patientId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Patient",
-      required: true,
+    },
+    // userId: populated when Patient books via their own account
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
     doctorId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -21,6 +25,7 @@ const appointmentSchema = new mongoose.Schema(
       enum: ["Scheduled", "Completed", "Cancelled"],
       default: "Scheduled",
     },
+    reason: { type: String, default: "" },
   },
   {
     timestamps: true,
