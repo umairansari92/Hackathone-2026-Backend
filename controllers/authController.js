@@ -111,12 +111,10 @@ export const login = async (req, res) => {
     if (user && (await user.matchPassword(password))) {
       // Check status for Doctors (or any user with status not Approved)
       if (user.status === "Pending") {
-        return res
-          .status(403)
-          .json({
-            message:
-              "Your account is under review. Please wait for admin approval.",
-          });
+        return res.status(403).json({
+          message:
+            "Your account is under review. Please wait for admin approval.",
+        });
       }
       if (user.status === "Rejected") {
         return res
@@ -143,4 +141,56 @@ export const login = async (req, res) => {
 
 export const getMe = async (req, res) => {
   res.json(req.user);
+};
+
+// @desc  Patient login via UID + password
+// @route POST /api/auth/patient-login
+// @access Public
+export const patientLogin = async (req, res) => {
+  try {
+    const { uid, password } = req.body;
+    if (!uid || !password) {
+      return res.status(400).json({ message: "UID and password are required" });
+    }
+
+    // Import here to avoid circular dependency at module load
+    const Patient = (await import("../models/Patient.js")).default;
+
+    const patient = await Patient.findOne({
+      uid: uid.toUpperCase().trim(),
+    }).select("+password");
+    if (!patient) {
+      return res.status(401).json({ message: "Invalid UID or password" });
+    }
+
+    const isMatch = await patient.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid UID or password" });
+    }
+
+    // Generate token with patient type marker
+    const token = jwt.sign(
+      { id: patient._id, type: "patient" },
+      process.env.JWT_SECRET,
+      { expiresIn: "30d" },
+    );
+
+    res.json({
+      _id: patient._id,
+      uid: patient.uid,
+      fullName: patient.fullName,
+      fatherOrHusbandName: patient.fatherOrHusbandName,
+      age: patient.age,
+      gender: patient.gender,
+      phone: patient.phone,
+      address: patient.address,
+      chronicConditions: patient.chronicConditions,
+      allergies: patient.allergies,
+      department: patient.department,
+      type: "patient",
+      token,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };

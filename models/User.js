@@ -33,8 +33,32 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["Admin", "Doctor", "Receptionist", "Patient"],
+      enum: [
+        "Admin",
+        "Doctor",
+        "Nurse",
+        "Receptionist",
+        "LabStaff",
+        "Pharmacist",
+        "Accountant",
+        "Supervisor",
+        "Patient",
+      ],
       default: "Patient",
+    },
+    department: {
+      type: String,
+      enum: [
+        "General OPD",
+        "Cardiology",
+        "Dental",
+        "Diabetology",
+        "Lab",
+        "Ultrasound",
+        "Pharmacy",
+        "",
+      ],
+      default: "",
     },
     subscriptionPlan: {
       type: String,

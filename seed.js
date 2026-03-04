@@ -500,21 +500,233 @@ async function seedSchedules(doctors) {
 }
 
 async function seedPatients(adminId) {
-  log("Seeding patients...");
+  log("Seeding patients (new identity model)...");
   await Patient.deleteMany({});
 
-  const patients = await Patient.insertMany(
-    PATIENT_NAMES.map(([name, gender]) => ({
-      name,
-      age: randInt(10, 72),
-      gender,
-      contact: phone(),
-      createdBy: adminId,
-    })),
-  );
+  const CHRONIC = [
+    "Hypertension on Amlodipine 5mg",
+    "Type 2 Diabetes on Metformin 500mg",
+    "Asthma — uses Salbutamol inhaler",
+    "Chronic gastritis on Omeprazole",
+    "Hyperthyroidism managed with PTU",
+    "Iron-deficiency anemia on supplements",
+    "No significant past history",
+    "Anxiety disorder on Escitalopram",
+    "Migraine — uses Sumatriptan",
+    "History of kidney stones (2021)",
+  ];
+  const ALLERGIES = [
+    "Penicillin",
+    "Sulpha drugs",
+    "NSAIDs",
+    "Shellfish",
+    "Latex",
+    "Aspirin",
+    "None known",
+    "Dust mites",
+    "Pollen",
+    "Eggs",
+  ];
+  const RELATIONS = [
+    "Muhammad Tariq",
+    "Abdul Rehman",
+    "Ghulam Hassan",
+    "Sardar Khan",
+    "Zafar Iqbal",
+    "Asif Hussain",
+    "Riaz Ahmed",
+    "Usman Ghani",
+    "Bashir Ahmad",
+    "Khalid Mehmood",
+  ];
+  const ADDRESSES = [
+    "House 12, Street 4, Model Town, Lahore",
+    "Flat 3B, Al-Noor Apartments, Gulshan-e-Iqbal, Karachi",
+    "Village Dhok Padhal, Rawalpindi",
+    "Plot 45, Phase 6, DHA, Lahore",
+    "Mohalla Islampura, Near Masjid, Faisalabad",
+    "Block C, Satellite Town, Gujranwala",
+    "House 7, Quid-e-Azam Colony, Multan",
+    "Street 9, G-11/3, Islamabad",
+    "Flat 2A, Shah Faisal Colony, Karachi",
+    "Canal Road, Opposite Jinnah Hospital, Lahore",
+  ];
 
-  ok(`Patients seeded: ${patients.length}`);
+  const patientData = PATIENT_NAMES.slice(0, 10).map(([name, gender], i) => ({
+    fullName: name,
+    fatherOrHusbandName: RELATIONS[i % RELATIONS.length],
+    age: randInt(18, 70),
+    gender,
+    phone: phone(),
+    address: ADDRESSES[i % ADDRESSES.length],
+    chronicConditions: CHRONIC[i % CHRONIC.length],
+    allergies: ALLERGIES[i % ALLERGIES.length],
+    department: rand(["General OPD", "Cardiology", "Dental", "Diabetology"]),
+    password: "demo1234", // will be hashed by pre-save hook
+    createdBy: adminId,
+  }));
+
+  const patients = [];
+  for (const pd of patientData) {
+    const p = await new Patient(pd).save(); // save one by one so pre-save hook runs
+    patients.push(p);
+    ok(`  Patient: ${p.fullName} → UID: ${p.uid}`);
+  }
+
+  ok(`Patients seeded: ${patients.length} (new identity model)`);
   return patients;
+}
+
+async function seedVisitsAndClinical(doctors, patients, adminId) {
+  log("Seeding visits and linked clinical records...");
+
+  const Visit = (await import("./models/Visit.js")).default;
+  const LabTest = (await import("./models/LabTest.js")).default;
+  const UltrasoundReport = (await import("./models/UltrasoundReport.js"))
+    .default;
+  const PharmacyRecord = (await import("./models/PharmacyRecord.js")).default;
+
+  await Visit.deleteMany({});
+  await LabTest.deleteMany({});
+  await UltrasoundReport.deleteMany({});
+  await PharmacyRecord.deleteMany({});
+
+  const DEPARTMENTS = ["General OPD", "Cardiology", "Dental", "Diabetology"];
+  const SYMPTOMS_VISIT = [
+    "Fever, cough and body aches for 3 days",
+    "Chest pain, palpitations",
+    "Toothache, gum swelling",
+    "Excessive thirst, frequent urination, blurred vision",
+    "Abdominal pain, nausea, vomiting",
+    "Joint pain, morning stiffness",
+    "Skin rash, itching on arms",
+    "Severe headache, blurred vision",
+    "Frequent urination with burning sensation",
+    "Lower back pain radiating to left leg",
+  ];
+  const DIAGNOSES = [
+    "Viral upper respiratory tract infection — symptomatic treatment",
+    "Hypertensive emergency — BP 190/110 — IV labetalol initiated",
+    "Acute dental abscess — tooth 36 — extraction planned",
+    "Uncontrolled Type 2 DM — HbA1c 9.2% — insulin initiation",
+    "Acute gastroenteritis — IV fluids, antiemetics",
+    "Early rheumatoid arthritis — ESR elevated, anti-CCP positive",
+    "Allergic contact dermatitis — topical hydrocortisone",
+    "Migraine with aura — Sumatriptan prescribed",
+    "UTI — Nitrofurantoin 100mg BD × 5 days",
+    "Lumbar disc herniation — L4-L5 — physiotherapy referral",
+  ];
+  const LAB_TESTS = [
+    { testName: "Complete Blood Count (CBC)", testType: "Blood" },
+    { testName: "Fasting Blood Sugar", testType: "Blood" },
+    { testName: "Urine Routine/Examination", testType: "Urine" },
+    { testName: "Liver Function Tests (LFTs)", testType: "Blood" },
+    { testName: "HbA1c", testType: "Blood" },
+    { testName: "Thyroid Profile (TSH)", testType: "Blood" },
+    { testName: "Urine C&S", testType: "Urine" },
+    { testName: "ESR", testType: "Blood" },
+  ];
+  const SCAN_TYPES = ["Abdominal", "Pelvic", "Thyroid", "Cardiac Echo"];
+  const FINDINGS_LIST = [
+    "No significant abnormality detected. Liver, spleen and kidneys normal in size.",
+    "Mild diffuse heterogeneity of thyroid. No discrete nodule.",
+    "Mild pericardial effusion. LV function preserved (EF 55%).",
+    "Small right ovarian cyst (2.1 cm) — likely follicular.",
+  ];
+  const LAB_STATUSES = ["Done", "Done", "Processing", "Pending"];
+  const US_STATUSES = ["Reported", "Reported", "Pending"];
+  const PHARM_MEDS = [
+    [{ name: "Paracetamol", dosage: "500mg", quantity: 15, price: 5 }],
+    [
+      { name: "Amoxicillin", dosage: "500mg", quantity: 21, price: 12 },
+      { name: "Omeprazole", dosage: "20mg", quantity: 10, price: 15 },
+    ],
+    [
+      { name: "Metformin", dosage: "500mg", quantity: 60, price: 8 },
+      { name: "Atorvastatin", dosage: "20mg", quantity: 30, price: 18 },
+    ],
+    [
+      { name: "Cetirizine", dosage: "10mg", quantity: 10, price: 7 },
+      { name: "Ibuprofen", dosage: "400mg", quantity: 15, price: 6 },
+    ],
+    [{ name: "Azithromycin", dosage: "500mg", quantity: 3, price: 45 }],
+  ];
+
+  const visits = [];
+  log("Creating 20 visits...");
+
+  // 2 visits per patient (10 patients × 2)
+  for (let i = 0; i < 20; i++) {
+    const patient = patients[Math.floor(i / 2)]; // 2 visits per patient
+    const doctor = rand(doctors);
+    const daysAgo = i < 10 ? randInt(10, 90) : randInt(1, 9);
+
+    const visit = await Visit.create({
+      patientId: patient._id,
+      doctorId: doctor._id,
+      department: rand(DEPARTMENTS),
+      visitDate: pastDate(daysAgo),
+      symptoms: SYMPTOMS_VISIT[i % SYMPTOMS_VISIT.length],
+      diagnosis: DIAGNOSES[i % DIAGNOSES.length],
+      notes: "Follow up in 7 days if no improvement.",
+      status: daysAgo > 0 ? "Completed" : "Scheduled",
+      createdBy: adminId,
+    });
+    visits.push(visit);
+
+    // Seed 1 Lab Test per visit
+    const labData = LAB_TESTS[i % LAB_TESTS.length];
+    await LabTest.create({
+      patientId: patient._id,
+      visitId: visit._id,
+      doctor: doctor._id,
+      testName: labData.testName,
+      testType: labData.testType,
+      status: LAB_STATUSES[i % LAB_STATUSES.length],
+      result:
+        i % 3 === 0
+          ? "Within normal limits"
+          : i % 3 === 1
+            ? "Mildly elevated — see notes"
+            : "",
+      fee: randInt(300, 1200),
+      department: "Lab",
+      processedBy: adminId,
+    });
+
+    // 50% chance: add Ultrasound
+    if (i % 2 === 0) {
+      await UltrasoundReport.create({
+        patientId: patient._id,
+        visitId: visit._id,
+        doctor: doctor._id,
+        scanType: rand(SCAN_TYPES),
+        findings: rand(FINDINGS_LIST),
+        impression: "No acute pathology. Routine follow-up advised.",
+        status: rand(US_STATUSES),
+        fee: randInt(800, 2500),
+        reportedBy: adminId,
+      });
+    }
+
+    // Seed pharmacy for this visit
+    const meds = rand(PHARM_MEDS);
+    const totalAmount = meds.reduce((sum, m) => sum + m.price * m.quantity, 0);
+    await PharmacyRecord.create({
+      patientId: patient._id,
+      visitId: visit._id,
+      medicines: meds,
+      totalAmount,
+      status: "Dispensed",
+      dispensedBy: adminId,
+    });
+  }
+
+  ok(`Visits seeded: ${visits.length}`);
+  ok(
+    `Lab tests: ${visits.length} | Ultrasounds: ${Math.ceil(visits.length / 2)} | Pharmacy: ${visits.length}`,
+  );
+  return visits;
 }
 
 async function seedAppointments(doctors, patients) {
@@ -691,6 +903,7 @@ async function main() {
     const { admins, doctors, receptionists } = await seedUsers();
     const leaveIndices = await seedSchedules(doctors);
     const patients = await seedPatients(admins[0]._id);
+    await seedVisitsAndClinical(doctors, patients, admins[0]._id);
     const appointments = await seedAppointments(doctors, patients);
     await seedTokens(doctors, patients, appointments, leaveIndices);
     await seedPrescriptions(doctors, patients);
@@ -710,9 +923,13 @@ async function main() {
     console.log("  Admin         → admin@smartcare.com");
     console.log("  Super Admin   → superadmin@smartcare.com");
     console.log("  Doctor        → ahmed.khan@smartcare.com");
-    console.log("  Doctor        → sana.malik@smartcare.com");
     console.log("  Receptionist  → reception1@smartcare.com");
-    console.log("  Receptionist  → reception2@smartcare.com");
+    console.log("─────────────────────────────────────────────");
+    console.log("\n\x1b[36mPatient UID Login (password: demo1234)\x1b[0m");
+    console.log("─────────────────────────────────────────────");
+    patients.forEach((p) => {
+      console.log(`  ${p.uid}  →  ${p.fullName} (${p.gender}, ${p.age}y)`);
+    });
     console.log("─────────────────────────────────────────────\n");
   } catch (err) {
     console.error(`\x1b[31m[ERROR]\x1b[0m ${err.message}`);
